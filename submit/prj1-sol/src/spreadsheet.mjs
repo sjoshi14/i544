@@ -16,6 +16,52 @@ export default class Spreadsheet {
     //@TODO
     this.spreadSheetObj = {};
   }
+  
+  /** Set cell with id baseCellId to result of evaluating formula
+   *  specified by the string expr.  Update all cells which are
+   *  directly or indirectly dependent on the base cell.  Return an
+   *  object mapping the id's of all dependent cells to their updated
+   *  values.  User errors must be reported by throwing a suitable
+   *  AppError object having code property set to `SYNTAX` for a
+   *  syntax error and `CIRCULAR_REF` for a circular reference
+   *  and message property set to a suitable error message.
+   */
+  async eval(baseCellId, expr) {
+    const updates = {};
+    //@TODO
+    let ast = parse(expr);
+    console.log(inspect(ast, false, Infinity));
+    let oldSpreedSheet = this.deepCopyFunction(this.spreadSheetObj);
+
+    updates[baseCellId] = this.recursiveExec(ast, baseCellId);
+    
+
+    if(this.spreadSheetObj[baseCellId] == undefined) {
+      this.spreadSheetObj[baseCellId] = new CellInfo(baseCellId, expr, updates[baseCellId]);
+    } else {
+      this.spreadSheetObj[baseCellId].number = updates[baseCellId];
+    }
+    const checkSet =  new Set(); 
+    if(this.checkDependency( baseCellId , checkSet)){
+      const msg = `circular ref involving ${baseCellId}`;
+      this.spreadSheetObj = oldSpreedSheet;
+      throw new AppError('CIRCULAR_REF', msg);
+    }
+
+    // check if dependent set exist
+    if(this.spreadSheetObj[baseCellId].dependent.size > 0) {
+      const dependent = this.spreadSheetObj[baseCellId].dependent;
+
+      dependent.forEach( key => {
+        this.eval(key, this.spreadSheetObj[key]['expr']).then( newUpdates => {
+          for(let key in newUpdates) { updates[key] = newUpdates[key] }
+        })
+      });
+    }
+    return updates;
+  }
+
+  //@TODO add methods
   recursiveExec(ast, baseCellId) {
 
     if(ast == undefined) return null; // handle with care
@@ -52,56 +98,8 @@ export default class Spreadsheet {
       return this.spreadSheetObj[key].number;
     }
   }
-  /** Set cell with id baseCellId to result of evaluating formula
-   *  specified by the string expr.  Update all cells which are
-   *  directly or indirectly dependent on the base cell.  Return an
-   *  object mapping the id's of all dependent cells to their updated
-   *  values.  User errors must be reported by throwing a suitable
-   *  AppError object having code property set to `SYNTAX` for a
-   *  syntax error and `CIRCULAR_REF` for a circular reference
-   *  and message property set to a suitable error message.
-   */
-  async eval(baseCellId, expr) {
-    const updates = {};
-    //@TODO
-    let ast = parse(expr);
-    // console.log(inspect(ast, false, Infinity));
-    // let oldSpreedSheet = JSON.parse(JSON.stringify(this.spreadSheetObj));
-    let oldSpreedSheet = this.deepCopyFunction(this.spreadSheetObj);
-
-    updates[baseCellId] = this.recursiveExec(ast, baseCellId);
-    
-
-    if(this.spreadSheetObj[baseCellId] == undefined) {
-      this.spreadSheetObj[baseCellId] = new CellInfo(baseCellId, expr, updates[baseCellId]);
-    } else {
-      this.spreadSheetObj[baseCellId].number = updates[baseCellId];
-    }
-    const checkSet =  new Set(); 
-    if(this.checkDependency( baseCellId , checkSet)){
-      const msg = `circular ref involving ${baseCellId}`;
-      this.spreadSheetObj = oldSpreedSheet;
-      // this.recursiveRollback(ast, baseCellId);
-      throw new AppError('CIRCULAR_REF', msg);
-    }
-
-    // check if dependent set exist
-    if(this.spreadSheetObj[baseCellId].dependent.size > 0) {
-      const dependent = this.spreadSheetObj[baseCellId].dependent;
-
-      dependent.forEach( key => {
-        this.eval(key, this.spreadSheetObj[key]['expr']).then( newUpdates => {
-          for(let key in newUpdates) { updates[key] = newUpdates[key] }
-        })
-      });
-    }
-    //console.log(JSON.stringify(this.spreadSheetObj, null, 2));
-    return updates;
-  }
-
-  //@TODO add methods
-
   
+  //Function for deep copying
   deepCopyFunction(inObject) {
   let outObject, value, key
 
@@ -125,6 +123,7 @@ export default class Spreadsheet {
 
   return outObject
 }
+  //Function to check if value is present in dependents set
   checkDependency ( key, setCheck ) {
 
     if(setCheck.has(key)) return true;
