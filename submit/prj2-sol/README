@@ -8,3 +8,5 @@ If you get any error, please try to delete the collection from cs544 and run it 
 Slack days:
 1 slack day is used.
 
+Topological Sort:
+Topological sort using BFS where every level sorted  lexicographically and pushed into result array
