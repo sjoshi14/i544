@@ -23,27 +23,52 @@ const MONGO_CONNECT_OPTIONS = { useUnifiedTopology: true };
 
 export default class PersistentSpreadsheet {
 
+
   //factory method
   static async make(dbUrl, spreadsheetName) {
+
+    // if(this.obj != undefined) return this.obj;
     try {
-      //@TODO set up database info, including reading data
+      //set up database info, including reading data
+      const client = await mongo.connect(dbUrl, MONGO_CONNECT_OPTIONS);
+      const db = client.db();
+      const users = db.collection(spreadsheetName);
+      const data = await users.find({}).project({"_id":0}).toArray();
+      return new PersistentSpreadsheet(client, db, users, spreadsheetName, data);
     }
     catch (err) {
       const msg = `cannot connect to URL "${dbUrl}": ${err}`;
       throw new AppError('DB', msg);
     }
-    return new PersistentSpreadsheet(/* @TODO params */);
+    
   }
 
-  constructor(/* @TODO params */) {
-    //@TODO
+  //constructor
+  constructor(clientName, dbName, colName, spName, data) {
+    this.memSpreadsheet = new MemSpreadsheet();
+
+    for( let each of data) {
+
+      this.memSpreadsheet.eval(each['id'], (each['formula'] != undefined)? each['formula'] : each['value'] + "" );
+    }
+
+    this.clientName = clientName;
+    this.dbName = dbName;
+    this.colName = colName;
+    this.spName = spName;
   }
 
   /** Release all resources held by persistent spreadsheet.
    *  Specifically, close any database connections.
    */
   async close() {
-    //@TODO
+    try{
+      await this.clientName.close();
+    }
+    catch (err) {
+      const msg = `cannot connect to URL "${dbUrl}": ${err}`;
+      throw new AppError('DB', msg);
+    }
   }
 
   /** Set cell with id baseCellId to result of evaluating string
@@ -52,12 +77,22 @@ export default class PersistentSpreadsheet {
    *  of all dependent cells to their updated values.
    */
   async eval(baseCellId, formula) {
-    const results = /* @TODO delegate to in-memory spreadsheet */ {}; 
+    const results = this.memSpreadsheet.eval(baseCellId, formula); 
     try {
-      //@TODO
+      var bulk = this.colName.initializeUnorderedBulkOp();
+      for( let key in results) {
+        await bulk.find( { id:  key} ).upsert()
+        .updateOne({
+          $set: {
+            id: key,
+            value :results[key]
+          }}
+       );
+      }
+      await bulk.find( { id:  baseCellId} ).update( { $set: { formula:  formula} } )
+      await bulk.execute();
     }
     catch (err) {
-      //@TODO undo mem-spreadsheet operation
       const msg = `cannot update "${baseCellId}: ${err}`;
       throw new AppError('DB', msg);
     }
@@ -68,19 +103,22 @@ export default class PersistentSpreadsheet {
    *  return { value: 0, formula: '' } for an empty cell.
    */
   async query(cellId) {
-    return /* @TODO delegate to in-memory spreadsheet */ {}; 
+    
+    return this.memSpreadsheet.query(cellId); 
   }
 
   /** Clear contents of this spreadsheet */
   async clear() {
     try {
-      //@TODO
+      await this.colName.remove({});
     }
     catch (err) {
       const msg = `cannot drop collection ${this.spreadsheetName}: ${err}`;
       throw new AppError('DB', msg);
     }
-    /* @TODO delegate to in-memory spreadsheet */
+    /* delegate to in-memory spreadsheet */
+    this.memSpreadsheet.clear();
+
   }
 
   /** Delete all info for cellId from this spreadsheet. Return an
@@ -88,13 +126,23 @@ export default class PersistentSpreadsheet {
    *  values.  
    */
   async delete(cellId) {
-    let results;
-    results = /* @TODO delegate to in-memory spreadsheet */ {}; 
-    try {
-      //@TODO
+    let results = this.memSpreadsheet.delete(cellId);
+    try {       
+        var bulk = this.colName.initializeUnorderedBulkOp();
+        await bulk.find({id: cellId}).removeOne();
+        for( let key in results) {
+          await bulk.find( { id:  key} ).upsert()
+          .updateOne({
+            $set: {
+              id: key,
+              value :results[key]
+            }}
+         );
+        }
+        
+        await bulk.execute();
     }
     catch (err) {
-      //@TODO undo mem-spreadsheet operation
       const msg = `cannot delete ${cellId}: ${err}`;
       throw new AppError('DB', msg);
     }
@@ -107,19 +155,39 @@ export default class PersistentSpreadsheet {
    *  an empty cell is equivalent to deleting the destination cell.
    */
   async copy(destCellId, srcCellId) {
-    const srcFormula = /* @TODO get formula by querying mem-spreadsheet */ '';
+    const srcFormula = this.memSpreadsheet.query(srcCellId)['formula'];
+    let results;
+
     if (!srcFormula) {
       return await this.delete(destCellId);
     }
     else {
-      const results = /* @TODO delegate to in-memory spreadsheet */ {}; 
+      const results = this.memSpreadsheet.copy(destCellId, srcCellId);
+      const formula =  this.memSpreadsheet.query(destCellId)['formula'] || "";
+
       try {
-	//@TODO
+          var bulk = this.colName.initializeUnorderedBulkOp();
+          for( let key in results) {
+            await bulk.find( { id:  key} ).upsert()
+            .updateOne({
+              $set: {
+                id: key,
+                value :results[key]
+              }}
+           );
+          }
+          await bulk.find( { id:  destCellId} )
+            .update({ 
+              $set: {
+                 formula:  formula
+                } 
+              });
+
+          await bulk.execute();
       }
       catch (err) {
-	//@TODO undo mem-spreadsheet operation
-	const msg = `cannot update "${destCellId}: ${err}`;
-	throw new AppError('DB', msg);
+	      const msg = `cannot update "${destCellId}: ${err}`;
+	      throw new AppError('DB', msg);
       }
       return results;
     }
@@ -148,9 +216,8 @@ export default class PersistentSpreadsheet {
    *  sort.
    */
   async dump() {
-    return /* @TODO delegate to in-memory spreadsheet */ []; 
+    return this.memSpreadsheet.dump(); 
   }
 
 }
 
-//@TODO auxiliary functions

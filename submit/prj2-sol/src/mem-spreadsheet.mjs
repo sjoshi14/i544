@@ -19,7 +19,8 @@ export default class MemSpreadsheet {
   constructor() {
     this._cells = {};  //map from cellIds to CellInfo objects
     this._undos = {};  //map from cellIds to previous this._cells[cellId]
-  }
+
+    }
   
   /** Set cell with id baseCellId to result of evaluating string
    *  formula.  Update all cells which are directly or indirectly
@@ -29,15 +30,18 @@ export default class MemSpreadsheet {
   eval(baseCellId, formula) {
     try {
       this._undos = {};
+
       const cellId = cellRefToCellId(baseCellId);
       const oldAst = this._cells[cellId]?.ast;
       const ast = parse(formula, cellId);
       const cell = this._updateCell(cellId, cell => cell.ast = ast);
       if (oldAst) this._removeAsDependent(cellId, oldAst);
       const updates = this._evalCell(cell, new Set());
+
       return updates;
     }
     catch (err) {
+      console.log(err)
       this.undo();
       throw err;
     }
@@ -47,14 +51,17 @@ export default class MemSpreadsheet {
    *  return { value: 0, formula: '' } for an empty cell.
    */
   query(cellId) {
-    //@TODO
-    return { };
+    let val = (this._cells[cellId] != undefined) ? this._cells[cellId].value : 0;
+    let formula = (this._cells[cellId] != undefined) ? this._cells[cellId].formula : "";
+
+    return { value:val , formula: formula};
   }
 
   /** Clear contents of this spreadsheet. No undo information recorded. */
   clear() {
     this._undos = {};
-    //@TODO
+    this._cells = {};
+
   }
 
   /** Delete all info for cellId from this spreadsheet. Return an
@@ -63,8 +70,19 @@ export default class MemSpreadsheet {
    */
   delete(cellId) {
     this._undos = {};
+
     const results = {};
-    //@TODO
+    const dependents = (this._cells[cellId]) ? this._cells[cellId].dependents : [];
+    
+    this._updateCell(cellId, cell => {});
+    delete this._cells[cellId];
+
+    dependents.forEach( dependent => {
+      let updates = this.eval( dependent,  this._cells[dependent].ast.toString(dependent) );
+      Object.assign(results, updates);
+    });
+
+    
     return results;
   }
 
@@ -75,8 +93,17 @@ export default class MemSpreadsheet {
    */
   copy(destCellId, srcCellId) {
     this._undos = {};
-    const results = {};
-    //@TODO
+    let results = {};
+  
+    if(this._cells[srcCellId]) {
+      const srcAst = this._cells[srcCellId].ast;
+      const destFormula = srcAst.toString(destCellId) ;
+  
+      results = this.eval(destCellId, destFormula);
+    } else {
+      results = this.delete(destCellId);
+    }
+
     return results;
   }
 
@@ -102,10 +129,62 @@ export default class MemSpreadsheet {
    *  Note that empty cells must be ignored during the topological
    *  sort.
    */
+
+  // Topological sort
+  findOrder( object) {
+
+    const keys =  Object.keys(object);
+    let count = keys.length;
+    const inDegrees = {};
+    const queue = [];
+
+    for ( let each of keys) {
+      inDegrees[each] = object[each].length;
+      if (inDegrees[each] === 0) queue.push(each);
+    }
+
+    const res = [];
+
+    while (queue.length) {
+
+      let size = queue.length;
+      const tmpRes = [];
+      for( let i = 0; i < size; i++ ) {
+        const each = queue.shift();
+        count--;
+        tmpRes.push(each);
+        
+        for( const v of keys) {
+          for (const u of object[v] ) {
+            if (u === each) {
+              inDegrees[v]--;
+              if (inDegrees[v] === 0) queue.push(v);
+            }
+          }
+        }
+      }
+
+      tmpRes.sort()
+      res.push( ...tmpRes);
+    }
+
+    return count === 0 ? res : [];
+  };
+
+
   dump() {
     const prereqs = this._makePrereqs();
-    //@TODO
-    return [];
+    const topoSort = this.findOrder(prereqs);
+
+    const result = [];
+    topoSort.forEach( data => {
+      result.push([
+        data,
+        this._cells[data].formula 
+      ]);
+    })
+
+    return result;
   }
 
   /** undo all changes since last operation */

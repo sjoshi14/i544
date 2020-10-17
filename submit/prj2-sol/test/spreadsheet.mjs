@@ -142,6 +142,7 @@ function doCommonTests() {
 		  i => (i < 4) ? String((i + 1)*3) : 'h4*2');
     assert.equal((await ss.query('i4')).value, 24);
     const results = await ss.copy('h4', 'f2'); //h4 = (e4 + f4)*g4
+
     assert.deepEqual(results, { h4: 81, i4: 162 });
   });
 
