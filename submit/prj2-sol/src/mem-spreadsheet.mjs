@@ -130,7 +130,10 @@ export default class MemSpreadsheet {
    *  sort.
    */
 
-  // Topological sort
+  /** Topological sort using bfs where every level sorted lexographically 
+   *  and pushed into result array
+   */
+   
   findOrder( object) {
 
     const keys =  Object.keys(object);
