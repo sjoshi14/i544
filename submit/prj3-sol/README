@@ -4,7 +4,9 @@ Email:		sjoshi14@binghamton.edu
 
 
 Comments:
-To run program with nodemon please go to package.json and change port number on which you want to run and use "npm run dev" command.
+1. Make sure to install npm install $HOME/cs544/lib/cs544-ss, cors, mongo, express and body-parser as runtime dependencies and nodemon as a development dependency.
+2. To run program with nodemon please go to package.json and change port number on which you want to run and use "npm run dev" command.
+
 
 
 Slack days:
