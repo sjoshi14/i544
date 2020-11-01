@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node ./index.mjs 2345 mongodb://localhost:27017 ~/cs544/projects/prj3/extras/test-ss.json &",
-    "dev": " npx nodemon --watch src ./index.mjs 2345 mongodb://localhost:27017/test-ss"
+    "dev": " npx nodemon --watch src ./index.mjs 2345 mongodb://localhost:27017/cs544"
   },
   "keywords": [],
   "author": "",

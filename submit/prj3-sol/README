@@ -2,5 +2,11 @@ Name:		Sharvari Kedar Joshi
 B-Number:	B00814899
 Email:		sjoshi14@binghamton.edu
 
-Add text here as needed.
+
+Comments:
+To run program with nodemon please go to package.json and change port number on which you want to run and use "npm run dev" command.
+
+
+Slack days:
+1 slack day is used.
 
