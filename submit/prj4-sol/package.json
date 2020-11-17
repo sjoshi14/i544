@@ -8,7 +8,8 @@
   },
   "scripts": {
     "test": "mocha test/",
-    "debug-test": "mocha --inspect-brk test/"
+    "debug-test": "mocha --inspect-brk test/",
+    "nodemon" : "npx nodemon --watch src ./index.mjs 2346 http://localhost:2345"
   },
   "keywords": [],
   "author": "",
@@ -16,7 +17,7 @@
   "dependencies": {
     "axios": "^0.21.0",
     "body-parser": "^1.19.0",
-    "cs544-ss": "file:../../../../cs544/lib/cs544-ss",
+    "cs544-ss": "file:../../../../../cs544/lib/cs544-ss",
     "express": "^4.17.1",
     "mustache": "^4.0.1"
   },

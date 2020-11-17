@@ -20,10 +20,12 @@ const BASE = '/api/store';
 export default class SSClient {
 
   static async make(serverBaseUrl) {
+    console.log("ServerBaseUrl"+serverBaseUrl);
     return new SSClient(serverBaseUrl);
   }
 
   constructor(url) {
+    //console.log("Constructor"+url);
     const axiosInstance = axios.create({baseURL: url});
     this.axios = axiosInstance;
   }
@@ -31,7 +33,9 @@ export default class SSClient {
     /** Update cellId for spreadsheet ssName to contain formula */
   async updateCell(ssName, cellId, formula) {
     try {
-      //@TODO
+      let url = BASE+"/"+ssName+"/"+cellId;
+      await this.axios.patch(url, {"formula": formula});
+      //console.log("store called" + url + " " + formula)
     }
     catch (err) {
       rethrow(err);
@@ -42,7 +46,8 @@ export default class SSClient {
   /** Clear contents of spreadsheet ssName */
   async clear(ssName) {
     try {
-      //@TODO
+      let url = BASE+"/"+ssName;
+      await this.axios.delete(url);
     }
     catch (err) {
       rethrow(err);
@@ -53,7 +58,8 @@ export default class SSClient {
   /** Delete all info for cellId from spreadsheet ssName. */
   async delete(ssName, cellId) {
     try {
-      //@TODO
+      let url = BASE+"/"+ssName+"/"+cellId;
+      await this.axios.delete(url);
     }
     catch (err) {
       rethrow(err);
@@ -63,7 +69,10 @@ export default class SSClient {
   /** Return list of pairs of cellId, formula for spreadsheet ssName */
   async readFormulas(ssName) {
     try {
-      //@TODO
+      let url = BASE+"/"+ssName;
+      let response = await this.axios.get(url);
+      //console.log(response.data);
+      return response.data;
     }
     catch (err) {
       rethrow(err);
