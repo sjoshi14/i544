@@ -2,6 +2,10 @@ Name:		Sharvari Kedar Joshi
 B-Number:	B00814899   
 Email:		sjoshi14@binghamton.edu
 
+Comments:
+Make sure to install npm install $HOME/cs544/lib/cs544-ss, axios, mustache, express and body-parser as runtime dependencies 
+and nodemon, mocha and chai as development dependencies.
+
 Slack days:
 2 slack days are used.
 
